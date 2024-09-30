@@ -4,37 +4,44 @@ import { Card } from 'react-native-paper';
 
 export default function App() {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [error, setError] = useState('');
+  const [isValidPhone, setIsValidPhone] = useState(false); // Biến để lưu trạng thái hợp lệ
 
-  // Hàm kiểm tra tính hợp lệ của số điện thoại
-  const validatePhoneNumber = () => {
-    const phoneRegex = /^[0-9]{10}$/; // Định dạng số điện thoại gồm 10 chữ số
-    if (!phoneRegex.test(phoneNumber)) {
-      setError('Số điện thoại không hợp lệ. Vui lòng nhập lại.');
-      return false;
-    }
-    setError('');
-    return true;
+  // Hàm validate số điện thoại
+  const validatePhoneNumber = (cleaned) => {
+    // Số điện thoại hợp lệ phải có đúng 10 chữ số và bắt đầu bằng số 0
+    return cleaned.length === 10 && cleaned.startsWith('0');
   };
 
-  // Hàm xử lý khi click nút "Tiếp tục"
+  // Hàm format số điện thoại thành dạng 000 000 0000
+  const formatPhoneNumber = (value) => {
+    // Loại bỏ tất cả các ký tự không phải số
+    const cleaned = value.replace(/\D/g, '');
+
+    // Giới hạn đầu vào chỉ tối đa 10 chữ số
+    let formatted = cleaned.slice(0, 10);
+
+    // Format thành dạng 000 000 0000
+    if (formatted.length > 6) {
+      formatted = `${formatted.slice(0, 3)} ${formatted.slice(3, 6)} ${formatted.slice(6, 10)}`;
+    } else if (formatted.length > 3) {
+      formatted = `${formatted.slice(0, 3)} ${formatted.slice(3, 6)}`;
+    }
+
+    // Kiểm tra tính hợp lệ
+    setIsValidPhone(validatePhoneNumber(cleaned));
+    
+    return formatted;
+  };
+
+  // Hàm xử lý khi bấm "Tiếp tục"
   const handleContinue = () => {
-    if (validatePhoneNumber()) {
-      Alert.alert('Thông báo', 'Số điện thoại hợp lệ!');
-      // Thực hiện các hành động tiếp theo, như gửi số điện thoại lên server
+    const cleaned = phoneNumber.replace(/\D/g, '');
+    if (!validatePhoneNumber(cleaned)) {
+      Alert.alert("Số điện thoại không hợp lệ", "Vui lòng nhập số điện thoại hợp lệ bắt đầu bằng số 0 và có đủ 10 chữ số.");
+    } else {
+      Alert.alert("Số điện thoại hợp lệ", "Bạn có thể tiếp tục.");
+      // Thực hiện hành động tiếp theo (ví dụ: gọi API)
     }
-  };
-
-  // Hàm xử lý nhập liệu và format lại số điện thoại
-  const handlePhoneInputChange = (text) => {
-    // Xóa các ký tự không phải là số
-    const formattedText = text.replace(/[^\d]/g, '');
-
-    // Format lại số theo định dạng: 123-456-7890
-    const formattedPhone = formattedText.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
-
-    setPhoneNumber(formattedPhone);
-    setError(''); // Xóa thông báo lỗi nếu đang nhập
   };
 
   return (
@@ -46,19 +53,30 @@ export default function App() {
         <Text style={styles.description}>
           Dùng số điện thoại để đăng nhập hoặc đăng ký tài khoản tại OneHousing Pro
         </Text>
-
+        
         <TextInput
-          style={[styles.input, error ? styles.inputError : null]}
+          style={styles.input}
           placeholder="Nhập số điện thoại của bạn"
           keyboardType="numeric"
           value={phoneNumber}
-          onChangeText={handlePhoneInputChange}
-          maxLength={12} // Giới hạn độ dài nhập cho đúng định dạng có gạch ngang
+          onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text))}
+          maxLength={12} // Độ dài tối đa tính cả dấu cách
         />
         
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        <TouchableOpacity style={styles.button} onPress={handleContinue}>
+        {/* Thông báo hợp lệ hay không hợp lệ */}
+        {phoneNumber.length === 12 && (
+          isValidPhone ? (
+            <Text style={styles.validText}>Số điện thoại hợp lệ</Text>
+          ) : (
+            <Text style={styles.invalidText}>Số điện thoại không hợp lệ</Text>
+          )
+        )}
+        
+        <TouchableOpacity
+          style={[styles.button, isValidPhone ? styles.buttonActive : styles.buttonDisabled]}
+          onPress={handleContinue}
+          disabled={!isValidPhone} // Nút bị vô hiệu hóa khi chưa nhập đủ 10 số hoặc không hợp lệ
+        >
           <Text style={styles.buttonText}>Tiếp tục</Text>
         </TouchableOpacity>
       </Card>
@@ -102,15 +120,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 20,
   },
-  inputError: {
-    borderColor: 'red',
+  validText: {
+    color: 'green',
+    marginBottom: 10,
   },
-  errorText: {
+  invalidText: {
     color: 'red',
     marginBottom: 10,
   },
   button: {
-    backgroundColor: '#007AFF',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
@@ -119,5 +137,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  buttonActive: {
+    backgroundColor: '#4CAF50', // Nút sáng khi số điện thoại hợp lệ
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc', // Nút mờ khi số điện thoại không hợp lệ
   },
 });
